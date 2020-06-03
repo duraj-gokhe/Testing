@@ -9,5 +9,8 @@ class Person(models.Model):
     Email = models.CharField(max_length=100)
     Password = models.CharField(max_length=100)
     Jwt = models.CharField(max_length=100)
-    CreateDateTime = models.DateTimeField()
-    LastUpdateDateTime = models.DateTimeField()
+    CreateDateTime = models.DateTimeField(auto_now_add=True)
+    LastUpdateDateTime = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return (self.FirstName)
