@@ -1,3 +1,4 @@
+from passlib.hash import pbkdf2_sha256
 from datetime import datetime
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -6,8 +7,9 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from datetime import datetime
 import json
-from rest_framework import serializers
+
 
 #Login on the application after registration
 @csrf_exempt
@@ -17,8 +19,8 @@ def login(request):
             username = response.get('username')
             password = response.get('password')
             user = Person.objects.get(UserName = username)
-            if Person.objects.filter(UserName = username) and Person.objects.filter(Password=password):
-                context = {"success":True, "personId":user.id}
+            if Person.objects.filter(UserName = username) and pbkdf2_sha256.verify(password, user.Password):
+                context = {"success":"Logged In Successfully!!!", "personId":user.id}
             else:           
                 context = {"success":False, "error":[{"status":"Username or password wrong"}]}
                 return JsonResponse(context,content_type='application/json; charset=utf-8',status=401)
@@ -47,23 +49,29 @@ def create_users(request):
             context = {"Message":"User name or email already exist"}
             return JsonResponse(context, content_type= "application/json")
         else:
-            create_user = Person(FirstName = first_name, LastName = last_name, UserName = username, Email = email, Password = password)
+            create_user = Person(FirstName = first_name, LastName = last_name, UserName = username, Email = email, Password = pbkdf2_sha256.hash(password))
             create_user.save()
             user = Person.objects.get(UserName = username)
-            if Person.objects.filter(UserName = username) and Person.objects.filter(Password = password):
-                context = {"success":True,"Person_id":user.id}
+            context = {"success":True,"Person_id":user.id}
             return JsonResponse(context,content_type='application/json', status = 200)
 
 #users fetch by name only
 def fetch_users(request):
     if request.method == 'GET':
+        data = []
         user_list = Person.objects.filter().order_by('CreateDateTime')
-        page = request.GET.get('page',1)
-        paginator = Paginator(user_list,5)
-        users = paginator.page(page)
-        # for user in user_list:
-            # details.append(str(user))
-        context = {"success":True, "data":users}
+        # page = request.GET.get('page',1)
+        # paginator = Paginator(user_list,5)
+        # users = paginator.page(page)
+        for user in user_list:
+            details = {}
+            details["Id"] = user.id
+            details["Name"] = user.FirstName + user.LastName
+            details["UserName"] = user.UserName
+            details["Email"] = user.Email
+            details["LastUpdated On"] = user.LastUpdateDateTime
+            data.append(details)
+        context = {"success":True, "data":data}
     return JsonResponse(context,content_type= 'application/json',status=200,safe=False)
 
 
